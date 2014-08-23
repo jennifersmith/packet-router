@@ -2,6 +2,9 @@
 
 (enable-console-print!)
 
+(defn make-component [name obj]
+  (.c js/Crafty name obj))
+
 (defn make-scene [name init-fn uninit-fn]
   (.scene js/Crafty name init-fn uninit-fn))
 
@@ -12,26 +15,32 @@
   (js/makescenewithtransition name init-fn next-scene))
 
 (defn loading-scene []
-  (println "loading")
   (.textFont 
    (.text
     (.e js/Crafty "2D, DOM, Text") "Welcome to Packet Router.... a game created for Connected Worlds theme Ludum Dare 36") 
    (clj->js {"size" "24px"})))
 
 (defn game-scene []
-(println "game")
-  (.textFont 
-   (.text
-    (.e js/Crafty "2D, DOM, Text") "You are playing my totes awesome game") 
-   (clj->js {"size" "24px"})))
+  (.e js/Crafty "Router"))
  
 (defn finish-scene []
-  (println "finish")
   (.textFont 
    (.text
     (.e js/Crafty "2D, DOM, Text") "YOU DIED! But you got a good score like.") 
    (clj->js {"size" "24px"})))
 
+
+(defn init-router-component [] 
+  (this-as me
+           (println me)
+           (.requires me "2D, Canvas, Color, Polygon")
+           (.color me "rgb(20, 125, 40)")
+           (.attr me (clj->js {"x" 10 "y" 10 "w" 100 "h" 100}))
+           )
+)
+
+(make-component "Router" (clj->js {:init init-router-component
+                                   }) )
 
 (make-scene-with-transition "Intro" loading-scene "Game")
 (make-scene-with-transition "Game" game-scene "Finish")
