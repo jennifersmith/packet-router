@@ -30,10 +30,10 @@
 
 (defn game-scene []
   (.e js/Crafty "Router")
-;;  (position-port (.e js/Crafty "Port") :north)
-;;  (position-port (.e js/Crafty "Port") :east)
+  (position-port (.e js/Crafty "Port") :north)
+  (position-port (.e js/Crafty "Port") :east)
   (position-port (.e js/Crafty "Port") :west)
-  (position-port (.e js/Crafty "Port") :east))
+  (position-port (.e js/Crafty "Port") :south))
  
 (defn finish-scene []
   (.textFont 
@@ -59,17 +59,30 @@
 (def loc->position
   {:west
    {"x" 30 
-    "y" 120 }
+    "y" 120
+    "r" 0}
    :east
    {"x" (- width 20 router-padding) 
-    "y" 120}})
+    "y" 120
+    "r" 0}
+   :south
+   {"x" (+ (- (/ width 2)  80 ) router-padding) 
+    "y" (- height (- router-padding 20))
+    "r" -90}
+   :north
+   {"x" (+ (- (/ width 2)  80 ) router-padding) 
+    "y" (+ router-padding 20)
+    "r" -90}})
 
 (defn set-port-loc [loc]
   (let [
-        coords (merge {:w 40 :h 80} (loc->position loc))]
+        position (loc->position loc)
+        coords (merge {:w 40 :h 80} (select-keys position ["x" "y"]) )]
     (println "Setting port location" :loc loc :coords coords)
     (this-as me
-             (.attr me (clj->js coords)))))
+             (.attr me (clj->js coords))
+             (set!
+              (.-rotation me) (position "r")))))
 
 (defn init-router-component [] 
   (this-as me
@@ -84,9 +97,9 @@
 
 (make-component "Router" (clj->js {:init init-router-component
                                    }) )
+
 (make-component "Port" (clj->js {:init init-port
-                                 :setPortLoc set-port-loc
-                                   }) )
+                                 :setPortLoc set-port-loc}))
 
 (make-scene-with-transition "Intro" loading-scene "Game")
 (make-scene-with-transition "Game" game-scene "Finish")
