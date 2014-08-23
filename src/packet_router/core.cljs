@@ -30,14 +30,18 @@
    (clj->js {"size" "24px"})))
 
 
+(def width 480)
+(def height 320)
+(def router-padding 50)
 (defn init-router-component [] 
   (this-as me
-           (println me)
            (.requires me "2D, Canvas, Color, Polygon")
            (.color me "rgb(20, 125, 40)")
-           (.attr me (clj->js {"x" 10 "y" 10 "w" 100 "h" 100}))
-           )
-)
+           (.attr me (clj->js {"x" router-padding "y" router-padding "w" 
+                               (- width (* 2 router-padding)) "h" (- height (* 2 router-padding))}))
+           ))
+
+
 
 (make-component "Router" (clj->js {:init init-router-component
                                    }) )
