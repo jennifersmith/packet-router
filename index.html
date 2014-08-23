@@ -11,20 +11,16 @@
               Crafty.scene(nextscreen);
              }
            }
-           console.log(nextscreen)
+
     ;
           var that = this;
-console.log("BINDING FOR " + name);
               Crafty.bind("KeyDown",this.next_scene);
           initfn();
           Crafty.e("Delay").delay(function() {
-             console.log("100ms later");
              that.ready_grr = true;
           }, 100, 0);
           },
           function(){
-          console.log("UNBIND");
-console.log("UNBINDING FOR " + name);
              Crafty.unbind("KeyDown", this.next_scene);
           });
           }

@@ -11,21 +11,6 @@
 (defn make-scene-with-transition [name init-fn next-scene]
   (js/makescenewithtransition name init-fn next-scene))
 
-(defn make-scene-with-transition-rubbish [name init-fn next-scene]
-  (let [arrgh (atom 0)]
-    (make-scene
-     name
-     (fn []
-       (this-as foo
-                (prn foo)
-        (init-fn)
-        (swap! arrgh
-               (fn [_] (.bind foo "KeyDown" #(switch-to-scene next-scene)))))
-       (println @arrgh))
-     (fn []
-       (@arrgh)))))
-
-
 (defn loading-scene []
   (println "loading")
   (.textFont 
