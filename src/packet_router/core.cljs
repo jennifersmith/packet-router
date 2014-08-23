@@ -23,17 +23,21 @@
     (.e js/Crafty "2D, DOM, Text") "Welcome to Packet Router.... a game created for Connected Worlds theme Ludum Dare 36") 
    (clj->js {"size" "24px"})))
 
+(defn make-entity [name]
+  (.e js/Crafty name))
 ;; So I am REALLY not using clojure correctly. I don't care. I can see a way and it still
 ;; feels easier to me to be in fam language. Justifications :)
 (defn position-port [e loc]
-  (.setPortLoc e loc))
+  (.setPortLoc e loc) e)
 
 (defn game-scene []
   (.e js/Crafty "Router")
-  (position-port (.e js/Crafty "Port") :north)
-  (position-port (.e js/Crafty "Port") :east)
-  (position-port (.e js/Crafty "Port") :west)
-  (position-port (.e js/Crafty "Port") :south))
+  (let [ports [(position-port (.e js/Crafty "Port") :north)
+               (position-port (.e js/Crafty "Port") :east)
+               (position-port (.e js/Crafty "Port") :west)
+               (position-port (.e js/Crafty "Port") :south)]]
+    (make-entity "Packet")
+    (.activatePort (first ports))))
  
 (defn finish-scene []
   (.textFont 
@@ -53,7 +57,7 @@
 
 (defn init-port []
   (this-as me
-           (.requires me "2D, Canvas, Color, Polygon")
+           (.requires me "Delay, 2D, Canvas, Color, Polygon")
            (.color me "rgb(50, 0, 50)")))
 
 (def loc->position
@@ -81,8 +85,23 @@
     (println "Setting port location" :loc loc :coords coords)
     (this-as me
              (.attr me (clj->js coords))
+             (set! (.-loc me) loc)
              (set!
               (.-rotation me) (position "r")))))
+
+
+(defn emit-packet []
+  ;; eek
+  (this-as me
+           (dump-statebag "Emitting packet from port " :loc (.-loc me))
+           (make-entity "Packet"))
+  )
+
+(defn activate-port []
+  (this-as me
+           (dump-statebag "I am a port that is being activated" :loc (.-loc me))
+           (.delay me emit-packet 1000 9)))
+
 
 (defn init-router-component [] 
   (this-as me
@@ -93,13 +112,19 @@
                                "w" router-width
                                "h" router-height}))))
 
-
+(defn init-packet []
+  (this-as me
+           (.requires me "2D, Canvas, Color, Polygon")
+           (.trigger js/Crafty "PacketCreated")))
 
 (make-component "Router" (clj->js {:init init-router-component
                                    }) )
 
 (make-component "Port" (clj->js {:init init-port
-                                 :setPortLoc set-port-loc}))
+                                 :setPortLoc set-port-loc
+                                 :activatePort activate-port}))
+
+(make-component "Packet" (clj->js {:init init-packet}))
 
 (make-scene-with-transition "Intro" loading-scene "Game")
 (make-scene-with-transition "Game" game-scene "Finish")
