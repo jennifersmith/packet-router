@@ -2,6 +2,9 @@
 
 (enable-console-print!)
 
+(defn dump-statebag [msg & kvs]
+  (println msg (apply hash-map kvs)))
+
 (defn make-component [name obj]
   (.c js/Crafty name obj))
 
@@ -20,9 +23,17 @@
     (.e js/Crafty "2D, DOM, Text") "Welcome to Packet Router.... a game created for Connected Worlds theme Ludum Dare 36") 
    (clj->js {"size" "24px"})))
 
+;; So I am REALLY not using clojure correctly. I don't care. I can see a way and it still
+;; feels easier to me to be in fam language. Justifications :)
+(defn position-port [e loc]
+  (.setPortLoc e loc))
+
 (defn game-scene []
   (.e js/Crafty "Router")
-  (.e js/Crafty "Port"))
+;;  (position-port (.e js/Crafty "Port") :north)
+;;  (position-port (.e js/Crafty "Port") :east)
+  (position-port (.e js/Crafty "Port") :west)
+  (position-port (.e js/Crafty "Port") :east))
  
 (defn finish-scene []
   (.textFont 
@@ -43,10 +54,22 @@
 (defn init-port []
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
-           (.color me "rgb(50, 0, 50)")
-           (.attr me (clj->js {"x" 30 "y" 120  "w" 
-                                          20 "h" 80}))))
+           (.color me "rgb(50, 0, 50)")))
 
+(def loc->position
+  {:west
+   {"x" 30 
+    "y" 120 }
+   :east
+   {"x" (- width 20 router-padding) 
+    "y" 120}})
+
+(defn set-port-loc [loc]
+  (let [
+        coords (merge {:w 40 :h 80} (loc->position loc))]
+    (println "Setting port location" :loc loc :coords coords)
+    (this-as me
+             (.attr me (clj->js coords)))))
 
 (defn init-router-component [] 
   (this-as me
@@ -62,6 +85,7 @@
 (make-component "Router" (clj->js {:init init-router-component
                                    }) )
 (make-component "Port" (clj->js {:init init-port
+                                 :setPortLoc set-port-loc
                                    }) )
 
 (make-scene-with-transition "Intro" loading-scene "Game")
