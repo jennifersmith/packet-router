@@ -132,6 +132,8 @@
 (defn init-packet []
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
+           (.color me "rgb(100,0,0)")
+           (.attr me (clj->js {:w 10 :h 10 :x 150 :y 150}))
            (.trigger js/Crafty "PacketCreated")))
 
 (make-component "Router" (clj->js {:init init-router-component
