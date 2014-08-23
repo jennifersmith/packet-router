@@ -21,7 +21,8 @@
    (clj->js {"size" "24px"})))
 
 (defn game-scene []
-  (.e js/Crafty "Router"))
+  (.e js/Crafty "Router")
+  (.e js/Crafty "Port"))
  
 (defn finish-scene []
   (.textFont 
@@ -33,17 +34,34 @@
 (def width 480)
 (def height 320)
 (def router-padding 50)
+
+(def router-width (- width (* 2 router-padding)))
+(def router-height (- height (* 2 router-padding)))
+
+(def port-width 40)
+
+(defn init-port []
+  (this-as me
+           (.requires me "2D, Canvas, Color, Polygon")
+           (.color me "rgb(50, 0, 50)")
+           (.attr me (clj->js {"x" 30 "y" 120  "w" 
+                                          20 "h" 80}))))
+
+
 (defn init-router-component [] 
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
            (.color me "rgb(20, 125, 40)")
-           (.attr me (clj->js {"x" router-padding "y" router-padding "w" 
-                               (- width (* 2 router-padding)) "h" (- height (* 2 router-padding))}))
-           ))
+           (.attr me (clj->js {"x" router-padding 
+                               "y" router-padding 
+                               "w" router-width
+                               "h" router-height}))))
 
 
 
 (make-component "Router" (clj->js {:init init-router-component
+                                   }) )
+(make-component "Port" (clj->js {:init init-port
                                    }) )
 
 (make-scene-with-transition "Intro" loading-scene "Game")
