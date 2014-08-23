@@ -30,14 +30,31 @@
 (defn position-port [e loc]
   (.setPortLoc e loc) e)
 
+(defn entity-count [name]
+  (.-length (js/Crafty name)))
+
+(defn packet-created [game-scene]
+  (when (> (entity-count "Packet") 5)
+    (println "TOO MANY PACKETS!")
+    (.scene js/Crafty "Finish")))
+
+
 (defn game-scene []
-  (.e js/Crafty "Router")
-  (let [ports [(position-port (.e js/Crafty "Port") :north)
-               (position-port (.e js/Crafty "Port") :east)
-               (position-port (.e js/Crafty "Port") :west)
-               (position-port (.e js/Crafty "Port") :south)]]
-    (make-entity "Packet")
-    (.activatePort (first ports))))
+  (this-as me
+           (.e js/Crafty "Router")
+           (let [ports [(position-port (.e js/Crafty "Port") :north)
+                        (position-port (.e js/Crafty "Port") :east)
+                        (position-port (.e js/Crafty "Port") :west)
+                        (position-port (.e js/Crafty "Port") :south)
+                        unbind (.bind js/Crafty "PacketCreated" #(packet-created me))]]
+             (make-entity "Packet")
+             (set! (.-unbind-my-events me) unbind)
+             (.activatePort (first ports)))))
+
+(defn game-scene-uninit []
+  (this-as me
+           (if-let [unbind (.-unbind-my-events me)]
+             (unbind))))
  
 (defn finish-scene []
   (.textFont 
@@ -127,7 +144,7 @@
 (make-component "Packet" (clj->js {:init init-packet}))
 
 (make-scene-with-transition "Intro" loading-scene "Game")
-(make-scene-with-transition "Game" game-scene "Finish")
+(make-scene "Game" game-scene game-scene-uninit)
 (make-scene-with-transition "Finish" finish-scene "Intro")
 
 (defn start-game []
