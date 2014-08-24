@@ -34,7 +34,7 @@
   (.-length (js/Crafty name)))
 
 (defn packet-created [game-scene]
-  (when (> (entity-count "Packet") 5)
+  (when (> (entity-count "Packet") 15)
     (println "TOO MANY PACKETS!")
     (.scene js/Crafty "Finish")))
 
@@ -47,7 +47,6 @@
                         (position-port (.e js/Crafty "Port") :west)
                         (position-port (.e js/Crafty "Port") :south)
                         unbind (.bind js/Crafty "PacketCreated" #(packet-created me))]]
-             (make-entity "Packet")
              (set! (.-unbind-my-events me) unbind)
              (.activatePort (first ports)))))
 
@@ -106,6 +105,43 @@
              (set!
               (.-rotation me) (position "r")))))
 
+(defn update-position-of-moving-component [entity]
+  (let [[x-vel y-vel] (.-_velocity entity)
+        time (.-_time entity)]
+    (set! (.-x entity) (+ (.-x entity) (* time x-vel)))
+    (set! (.-y entity) (+ (.-y entity) (* time y-vel))))
+          entity)
+
+(defn init-moving []
+  (this-as me
+           (.requires me "2D")
+           (dump-statebag "I am a moving thing" :time (.-_time me) :vel (.-_velocity me))
+           
+           (.bind me "EnterFrame" #(update-position-of-moving-component me))
+           )
+  )
+
+(make-component "Mover" 
+                (clj->js {
+                          :init init-moving
+                          :_time 0.1
+                          :_velocity [10 10]
+                                   }) )
+
+;; private member access oyeah
+
+(defn init-random-mover []
+  (this-as me
+           (let [vel [ (- 40 (rand-int 80)) (- 40 (rand-int 80))]]
+             (println "HERE" vel)
+             (.requires me "Mover")
+             (set!
+              (.-_velocity me) vel))))
+
+(make-component "RandomMover"
+                (clj->js {
+                          :init init-random-mover
+                          }))
 
 (defn emit-packet []
   ;; eek
@@ -117,7 +153,7 @@
 (defn activate-port []
   (this-as me
            (dump-statebag "I am a port that is being activated" :loc (.-loc me))
-           (.delay me emit-packet 1000 9)))
+           (.delay me emit-packet 1000 1000)))
 
 
 (defn init-router-component [] 
@@ -131,9 +167,10 @@
 
 (defn init-packet []
   (this-as me
-           (.requires me "2D, Canvas, Color, Polygon")
+           (.requires me "2D, Canvas, Color, Polygon, RandomMover")
            (.color me "rgb(100,0,0)")
            (.attr me (clj->js {:w 10 :h 10 :x 150 :y 150}))
+;;           (.velocity me 1 1 0)
            (.trigger js/Crafty "PacketCreated")))
 
 (make-component "Router" (clj->js {:init init-router-component
