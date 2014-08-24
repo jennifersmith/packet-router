@@ -82,12 +82,23 @@
   (this-as me
            (.requires me "Delay, 2D, Canvas, Color, Polygon")
            (.color me "rgb(50, 0, 50)")
+           (set! (.-z me) 2)
            (.attr me (clj->js  {:x 0 :y 0 :w 40 :h 80}))
            (.origin me "center")
            (let [entrance (make-entity "Entrance")]
              (.attach me entrance)
              (set! (.-entrance me) entrance)
              (.attr entrance (clj->js {:x 35 :y 37 }))
+             )
+           (let [shortcut (make-entity "Color, 2D, DOM, Text")]
+             (.attr shortcut (clj->js {
+                                       :x -50
+                                       :y -1}))
+             (.attach me shortcut)
+             (.text shortcut "\u2190")
+             (.textFont shortcut (clj->js {:weight "bold" :size "70px"}))
+             (.color shortcut "#000000", 1.0)
+             (set! (.-shortcut me) shortcut)
              )))
 
 (def loc->position
@@ -96,25 +107,33 @@
     "y" 120
     "r" 0
     :entrance [(+ router-padding 40) (+ 120 40)]
-    :heading 90}
+    :heading 90
+    :color "rgb(0,0,255)"
+    :shortcut-icon "\u2190"}
    :east
    {"x" (- width router-padding 40) 
     "y" 120
     "r" 180
     :entrance [150 150]
-    :heading -90}
+    :heading -90
+    :color "rgb(0,255,0)"
+    :shortcut-icon "\u2190"}
    :south
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" (- height router-padding 60)
     "r" -89.999999
     :entrance [150 150]
-    :heading 180}
+    :heading 180
+    :color "rgb(255,0,0)"
+    :shortcut-icon "\u2190"}
    :north
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" 30
     "r" 89.999999
     :entrance [150 150]
-    :heading 0}})
+    :heading 0
+    :color "rgb(255,0,255)"
+    :shortcut-icon "\u2190"}})
 
 (defn set-port-loc [loc]
   (let [
@@ -123,12 +142,16 @@
         coords (select-keys position ["x" "y"])]
     (println "Setting port location" :loc loc :coords coords :position position)
     (this-as me
-             (set! (.-x me) (position "x"))
-             (set! (.-y me) (position "y"))
-             (println (.-w me))
-             (set! (.-loc me) loc)
-             (set! (.-heading me) heading)
-             (set! (.-rotation me) (position "r")))))
+             (let [shortcut (.-shortcut me)]
+               (set! (.-x me) (position "x"))
+               (set! (.-y me) (position "y"))
+               (println (.-w me))
+               (set! (.-loc me) loc)
+               (.color me (:color position))
+               (set! (.-heading me) heading)
+               (set! (.-rotation me) (position "r"))
+               )
+)))
 
 (defn update-position-of-moving-component [entity]
   (let [[x-vel y-vel] (.-vectorvelocity entity)
@@ -254,6 +277,7 @@
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
            (.color me "rgb(100,100,100)")
+           (set! (.-z me) 2)
            (.attr me (clj->js {:w 5 :h 6}))))
 
 (defn init-router-boundary []
