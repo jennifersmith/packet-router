@@ -81,6 +81,7 @@
            (.origin me "center")
            (let [entrance (make-entity "Entrance")]
              (.attach me entrance)
+             (set! (.-entrance me) entrance)
              (.attr entrance (clj->js {:x 35 :y 37 }))
              )))
 
@@ -90,19 +91,19 @@
     "y" 120
     "r" 0
     :entrance [(+ router-padding 40) (+ 120 40)]
-    :heading 180}
+    :heading 90}
    :east
    {"x" (- width 20 router-padding) 
     "y" 120
     "r" 180
     :entrance [150 150]
-    :heading 0}
+    :heading -90}
    :south
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" (- height router-padding 40)
     "r" -89.999999
     :entrance [150 150]
-    :heading 90}
+    :heading 180}
    :north
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" 10
@@ -114,7 +115,6 @@
   (let [
         position (loc->position loc)
         heading (:heading position)
-        entrance (:entrance position)
         coords (select-keys position ["x" "y"])]
     (println "Setting port location" :loc loc :coords coords :position position)
     (this-as me
@@ -123,7 +123,6 @@
              (println (.-w me))
              (set! (.-loc me) loc)
              (set! (.-heading me) heading)
-             (set! (.-entrance me) entrance)
              (set! (.-rotation me) (position "r")))))
 
 (defn update-position-of-moving-component [entity]
@@ -168,7 +167,7 @@
 
 (defn move-randomly [min-heading max-heading]
   (this-as me
-           (let [vel (+ 1 (rand-int 40))
+           (let [vel (+ 10 (rand-int 40))
                  heading  (+ min-heading (rand-int (- max-heading min-heading)))
                  vector-velocity (map #(* % vel) (angle-to-unit-vectors (deg->rad heading)))]
              (dump-statebag "moving randomly" 
@@ -188,11 +187,11 @@
 
 (defn emit-packet [port]
   ;; eek
-  (dump-statebag "Emitting packet from port " :loc (.-loc port) :heading (.-heading port) :entrance (.-entrance port))
+  (dump-statebag "Emitting packet from port " :loc (.-loc port) :heading (.-heading port))
   (let [packet (make-entity "Packet")
         heading (.-heading port)
-        [x y] (.-entrance port)]
-    (.attr packet (clj->js {:x x :y y}))
+        entrance (.-entrance port)]
+    (.attr packet (clj->js {:x (.-x entrance) :y (.-y entrance)}))
     (.moveRandomly packet (- heading 60) (+ heading 60))))
 
 (defn activate-port []
