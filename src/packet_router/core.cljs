@@ -103,6 +103,11 @@
              (.color shortcut "#000000", 1.0)
              (set! (.-shortcut me) shortcut)
              )))
+(def colors #{
+              "rgb(0,0,255)"
+              "rgb(0,255,0)"
+              "rgb(255,0,0)"
+              "rgb(255,0,255)"})
 
 (def loc->position
   {:west
@@ -227,6 +232,7 @@
   (let [packet (make-entity "Packet")
         heading (.-heading port)
         entrance (.-entrance port)]
+    (.color packet (first (shuffle (disj colors (.-_color port)))))
     (.attr packet (clj->js {:x (.-x entrance) :y (.-y entrance)}))
     (.moveRandomly packet (- heading 60) (+ heading 60))))
 
@@ -270,7 +276,7 @@
 (defn init-packet []
   (this-as me
            (set! (.-markNext me) #(mark-as-next me))
-           (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision, WiredHitBox")
+           (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision")
            (.color me "rgb(100,0,0)")
            (.attr me (clj->js {:w 10 :h 10}))
            (set! (.-alpha me) 0.5)
