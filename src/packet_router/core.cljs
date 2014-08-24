@@ -325,7 +325,9 @@
    :sent
    (fn [packet]
      (.color packet "rgb(100,100,100)")
-     (make-tick packet))
+     (make-tick packet)
+     (.delay packet #(.destroy packet) 1000 0 )
+     )
    :next
    (fn [packet]
      (set! (.-w packet) 30)
@@ -339,7 +341,7 @@
 
 (defn init-packet []
   (this-as me
-           (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision")
+           (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision,Delay")
            (change-state me :new)
 ;;           (.velocity me 1 1 0)
            (.trigger js/Crafty "PacketCreated" {:new-packet me})
