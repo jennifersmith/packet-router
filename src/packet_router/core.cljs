@@ -298,9 +298,9 @@
 (defn make-tick [packet]
   (let [tick (make-entity "Dom, 2D, Color, Canvas, Text")]
     (.attach packet tick)
-    (.color tick "rgb(0,0,0)")
+    (.color tick (.color (.-destination packet)))
     (.text tick "X")
-    (.textFont tick (clj->js {"size" "8px"}))
+    (.textFont tick (clj->js {"size" "20px"}))
     (.attr tick (clj->js {:x (+ 5 (.-_x packet)) :y (+ 5 (.-_y packet))}))
     ))
 
