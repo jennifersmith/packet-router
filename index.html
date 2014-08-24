@@ -30,5 +30,49 @@
         <script src="out/goog/base.js" type="text/javascript"></script>
         <script src="packet_router.js" type="text/javascript"></script>
         <script type="text/javascript">goog.require("packet_router.core");</script>
+
+        <div id='cr-stage'></div>
+<p>INSTRUCTIONS: Use the cursor keys to route packets to the
+  ports. The game ends when there are more than 40 packets in the router.</p>
+        <h3>The Blurb</h3>
+
+        <p>You play a router receiving packets from connected
+        peers. Your goal is to send them in the best direction to make
+        their destination. Only problem is that you don't know the
+        shape of the network except what incoming packets tell
+        you.</p>
+        <p>Quickly route packets the right way to build up info about
+        the network. Deal with changes of information and network
+        outages. You play the algorithm!</p>
+        
+        <h3>The Idea</h3>
+        <p>Took the theme of connected worlds and thought about the
+        packet switching/routing algorithms that my very basic
+        understanding and study of networks helped me to
+        understand.</p>
+        
+        <h3>The implementation</h3>
+        <p>VERY MUCH less than what I planned. Turns out not having
+        ever written a game before that there is a lot to learn. It's
+        possibly the worst code I have ever turned out, but
+        conversely some of the most fun I have had writing it!</p>
+        <p>Spent a lot of time drawing boxes, getting them to
+        bounce. There is a very basic game there - when the router
+        has too many packets it will fail (about 40 or so).</p>
+        
+        <p>WORKS IN MY VERSION OF CHROME</p>
+        <p>And apologies for the use of unfriendly colours</p>
+
+        <p>SOURCE: <a href="https://github.com/jennifersmith/packet-router">https://github.com/jennifersmith/packet-router</a></p>
+
+        <h3>The tools</h3>
+        <ul>
+          <li>Clojurescript</li>
+          <li>Javascript</li>
+          <li>leinigen and mies a template for clojurescript</li>
+          <li>Crafty.js</li>
+          <li>s3 for hosting</li>
+          </ul>
+
     </body>
 </html>
