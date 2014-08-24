@@ -87,26 +87,26 @@
 
 (def loc->position
   {:west
-   {"x" 30 
+   {"x" router-padding
     "y" 120
     "r" 0
     :entrance [(+ router-padding 40) (+ 120 40)]
     :heading 90}
    :east
-   {"x" (- width 20 router-padding) 
+   {"x" (- width router-padding 40) 
     "y" 120
     "r" 180
     :entrance [150 150]
     :heading -90}
    :south
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
-    "y" (- height router-padding 40)
+    "y" (- height router-padding 60)
     "r" -89.999999
     :entrance [150 150]
     :heading 180}
    :north
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
-    "y" 10
+    "y" 30
     "r" 89.999999
     :entrance [150 150]
     :heading 0}})
@@ -210,10 +210,10 @@
                                "y" router-padding 
                                "w" router-width
                                "h" router-height}))
-           (make-router-boundary me router-padding   router-padding  10 router-height )
-           (make-router-boundary me (+ router-width router-padding -10)  router-padding  10 router-height )
-           (make-router-boundary me router-padding  (- router-padding 10) router-width 10)
-           (make-router-boundary me router-padding  (+ router-padding router-height) router-width 10)))
+           (make-router-boundary me (+ 5 router-padding)   router-padding  5 router-height )
+           (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height )
+           (make-router-boundary me router-padding  router-padding  router-width 5)
+           (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5)))
 
 (defn stop-moving [packet]
   (set!  (.-_velocity packet) [0 0])
@@ -239,7 +239,7 @@
 
 (defn init-router-boundary []
   (this-as me
-           (.requires me "2D, Polygon, Canvas, Collision, WiredHitBox, Color")
+           (.requires me "2D, Polygon, Canvas, Collision, Color")
            ))
 (make-component "Entrance" (clj->js {:init init-entrance}))
 
