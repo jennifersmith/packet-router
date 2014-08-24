@@ -18,10 +18,11 @@
   (js/makescenewithtransition name init-fn next-scene))
 
 (defn loading-scene []
-  (.textFont 
-   (.text
-    (.e js/Crafty "2D, DOM, Text") "Welcome to Packet Router.... a game created for Connected Worlds theme Ludum Dare 36") 
-   (clj->js {"size" "24px"})))
+  (let [title-text (.e js/Crafty "TitleText") ]
+    (.text
+     title-text
+     "Welcome to Packet Router.... <br/>a game created for Connected Worlds theme Ludum Dare 36")
+    (.attr title-text  (clj->js {:y 100}))) )
 
 (defn make-entity [name]
   (.e js/Crafty name))
@@ -53,10 +54,12 @@
              (unbind))))
  
 (defn finish-scene []
-  (.textFont 
-   (.text
-    (.e js/Crafty "2D, DOM, Text") "YOU DIED! But you got a good score like.") 
-   (clj->js {"size" "24px"})))
+  (let [title-text (.e js/Crafty "TitleText") ]
+    (.text
+     title-text
+     "YOU DIED! <br/>(But you got a good score, honest)")
+    (.attr title-text  (clj->js {:y 150})))
+)
 
 
 (def width 480)
@@ -362,6 +365,15 @@
   (this-as me
            (.requires me "2D, Polygon, Canvas, Collision, Color")
            ))
+
+(defn init-title-text []
+  (this-as me
+           (.requires me "Color,2D, DOM, Text")
+           (.textFont me (clj->js {:size "24px"}))
+           (.css me (clj->js {:text-align "center"}))
+           (.textColor me "rgb(100,100,100)")
+           (.attr me (clj->js {:x router-padding :w router-width}))
+           ))
 (make-component "Entrance" (clj->js {:init init-entrance}))
 
 (make-component "Port" (clj->js {:init init-port
@@ -372,6 +384,7 @@
 
 (make-component "RouterBoundary" (clj->js {:init init-router-boundary}))
 
+(make-component "TitleText" (clj->js {:init init-title-text}))
 (make-scene-with-transition "Intro" loading-scene "Game")
 (make-scene "Game" game-scene game-scene-uninit)
 (make-scene-with-transition "Finish" finish-scene "Intro")
@@ -379,7 +392,7 @@
 
 (defn start-game []
   (.init js/Crafty 480 320)
-  (.background js/Crafty "rgb(87, 109, 20)")
+  (.background js/Crafty "rgb(100, 100, 100)")
   (switch-to-scene "Intro"))
 
 (.addEventListener js/window "load" start-game)
