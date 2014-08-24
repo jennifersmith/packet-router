@@ -34,7 +34,7 @@
   (.-length (js/Crafty name)))
 
 (defn packet-created [game-scene]
-  (when (> (entity-count "Packet") 15)
+  (when (> (entity-count "Packet") 45)
     (println "TOO MANY PACKETS!")
     (.scene js/Crafty "Finish")))
 
@@ -45,10 +45,12 @@
            (let [ports [(position-port (.e js/Crafty "Port") :north)
                         (position-port (.e js/Crafty "Port") :east)
                         (position-port (.e js/Crafty "Port") :west)
-                        (position-port (.e js/Crafty "Port") :south)
-                        unbind (.bind js/Crafty "PacketCreated" #(packet-created me))]]
+                        (position-port (.e js/Crafty "Port") :south)]
+                 unbind (.bind js/Crafty "PacketCreated" #(packet-created me))]
              (set! (.-unbind-my-events me) unbind)
-             (.activatePort (first ports)))))
+             (doseq [port ports]
+
+               (.activatePort port)))))
 
 (defn game-scene-uninit []
   (this-as me
@@ -80,28 +82,34 @@
   {:west
    {"x" 30 
     "y" 120
-    "r" 0}
+    "r" 0
+    :heading 180}
    :east
    {"x" (- width 20 router-padding) 
     "y" 120
-    "r" 0}
+    "r" 0
+    :heading 0}
    :south
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" (- height (- router-padding 20))
-    "r" -90}
+    "r" -90
+    :heading 90}
    :north
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" (+ router-padding 20)
-    "r" -90}})
+    "r" -90
+    :heading 0}})
 
 (defn set-port-loc [loc]
   (let [
         position (loc->position loc)
-        coords (merge {:w 40 :h 80} (select-keys position ["x" "y"]) )]
+        heading (:heading position)
+        coords (merge {:w 40 :h 80} (select-keys position ["x" "y"]))]
     (println "Setting port location" :loc loc :coords coords)
     (this-as me
              (.attr me (clj->js coords))
              (set! (.-loc me) loc)
+             (set! (.-heading me) heading)
              (set!
               (.-rotation me) (position "r")))))
 
@@ -125,35 +133,57 @@
                 (clj->js {
                           :init init-moving
                           :_time 0.1
-                          :_velocity [10 10]
+                          :_velocity [0 0]
                                    }) )
 
+;; the programmer can only work in degrees today
+(defn deg->rad [angle]
+  (* angle (/ (.-PI js/Math) 180)))
+
+(defn sin [angle]
+  (.sin js/Math  angle))
+
+(defn cos [angle]
+  (.cos js/Math angle))
+
+(def angle-to-unit-vectors (juxt sin cos))
 ;; private member access oyeah
 
 (defn init-random-mover []
   (this-as me
-           (let [vel [ (- 40 (rand-int 80)) (- 40 (rand-int 80))]]
-             (println "HERE" vel)
-             (.requires me "Mover")
+           (.requires me "Mover")))
+
+(defn move-randomly [min-heading max-heading]
+  (this-as me
+           (let [vel (+ 1 (rand-int 40))
+                 heading  (+ min-heading (rand-int (- max-heading min-heading)))
+                 vector-velocity (map #(* % vel) (angle-to-unit-vectors (deg->rad heading)))]
+             (dump-statebag "moving randomly" 
+                            :vector-vels vector-velocity 
+                            :min-heading min-heading
+                            :max-heading max-heading
+                            :heading heading)
              (set!
-              (.-_velocity me) vel))))
+              (.-_velocity me) vector-velocity))))
+
 
 (make-component "RandomMover"
                 (clj->js {
                           :init init-random-mover
+                          :moveRandomly move-randomly
                           }))
 
-(defn emit-packet []
+(defn emit-packet [port]
   ;; eek
-  (this-as me
-           (dump-statebag "Emitting packet from port " :loc (.-loc me))
-           (make-entity "Packet"))
-  )
+  (dump-statebag "Emitting packet from port " :loc (.-loc port) :heading (.-heading port))
+  (let [packet (make-entity "Packet")
+        heading (.-heading port)]
+    (.moveRandomly packet (- heading 60) (+ heading 60) )))
 
 (defn activate-port []
   (this-as me
            (dump-statebag "I am a port that is being activated" :loc (.-loc me))
-           (.delay me emit-packet 1000 1000)))
+           (.delay me #(emit-packet me) 1000 1000)))
 
 
 (defn init-router-component [] 
