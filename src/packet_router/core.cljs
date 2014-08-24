@@ -131,25 +131,36 @@
              (set! (.-rotation me) (position "r")))))
 
 (defn update-position-of-moving-component [entity]
-  (let [[x-vel y-vel] (.-_velocity entity)
+  (let [[x-vel y-vel] (.-vectorvelocity entity)
         time (.-_time entity)]
     (set! (.-x entity) (+ (.-x entity) (* time x-vel)))
     (set! (.-y entity) (+ (.-y entity) (* time y-vel))))
           entity)
 
+(defn move-mover [heading velocity] 
+  (this-as me
+           (set! (.-heading me) heading) 
+           (set! (.-velocity me) velocity) 
+           (set! (.-vectorvelocity me) (map #(* % velocity) (angle-to-unit-vectors (deg->rad heading))))))
+
+(defn reflect-mover [normal] 
+  (this-as me
+           (.move me (- (* 2 normal) (.-heading me)) (.-velocity me))))
+
 (defn init-moving []
   (this-as me
            (.requires me "2D")
-           
-           (.bind me "EnterFrame" #(update-position-of-moving-component me))
-           )
-  )
+           (set! (.-move me) move-mover) ;; mmmmmm
+           (set! (.-reflect me) reflect-mover)
+           (.bind me "EnterFrame" #(update-position-of-moving-component me))))
 
 (make-component "Mover" 
                 (clj->js {
                           :init init-moving
                           :_time 0.1
-                          :_velocity [0 0]
+                          :velocity 0
+                          :vectorvelocity [0 0]
+                          :heading 0
                                    }) )
 
 ;; the programmer can only work in degrees today
@@ -172,11 +183,8 @@
 (defn move-randomly [min-heading max-heading]
   (this-as me
            (let [vel (+ 10 (rand-int 40))
-                 heading  (+ min-heading (rand-int (- max-heading min-heading)))
-                 vector-velocity (map #(* % vel) (angle-to-unit-vectors (deg->rad heading)))]
-
-             (set!
-              (.-_velocity me) vector-velocity))))
+                 heading  (+ min-heading (rand-int (- max-heading min-heading)))]
+             (.move me heading vel))))
 
 
 (make-component "RandomMover"
@@ -201,10 +209,11 @@
            (dump-statebag "I am a port that is being activated" :loc (.-loc me))
            (.delay me #(emit-packet me) 1000 1000)))
 
-
-(defn make-router-boundary [router x y w h]
+;; normal - the angle of 'normal' for bounce
+(defn make-router-boundary [router x y w h normal]
   (let [router-boundary (make-entity "RouterBoundary")]
     (.attach router router-boundary)
+    (set! (.-normal router-boundary) normal)
     (.attr  router-boundary (clj->js {:w w :x x :h h :y y}))))
 
 (defn init-router-component [] 
@@ -215,14 +224,19 @@
                                "y" router-padding 
                                "w" router-width
                                "h" router-height}))
-           (make-router-boundary me (+ 5 router-padding)   router-padding  5 router-height )
-           (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height )
-           (make-router-boundary me router-padding  router-padding  router-width 5)
-           (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5)))
+           (make-router-boundary me (+ 5 router-padding)   router-padding  5 router-height 180)
+           (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height 180)
+           (make-router-boundary me router-padding  router-padding  router-width 5, 90)
+           (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5, 90)))
 
-(defn bounce [packet]
-  (set!  (.-_velocity packet) [0 0])
-)
+
+;; this is the worst thing ever ... presume smart way to do this
+
+(defn bounce [packet [args]]
+  (let [wall (.-obj args)
+        normal (.-normal wall)]
+    (.reflect packet normal)))
+
 (defn init-packet []
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision, WiredHitBox")
@@ -230,7 +244,7 @@
            (.attr me (clj->js {:w 10 :h 10}))
 ;;           (.velocity me 1 1 0)
            (.trigger js/Crafty "PacketCreated")
-           (.onHit me "RouterBoundary" #(bounce me ))
+           (.onHit me "RouterBoundary" #(bounce me %))
            ))
 
 (make-component "Router" (clj->js {:init init-router-component
