@@ -244,17 +244,28 @@
     (set! (.-normal router-boundary) normal)
     (.attr  router-boundary (clj->js {:w w :x x :h h :y y}))))
 
+(defn current-packet-changed [packet-queue]
+  (when-let [next (peek packet-queue)]
+    (mark-as-next next))
+)
 (defn send-packet-out [router args]
-  (prn "PORT OPENED SEND PACKET OUT")
-  )
+  (let [packet-queue (.-packetQueue router)]
+    (when-let [current-packet (peek @packet-queue)]
+      (prn "SENDING OUT PACKET... now find correct queue")
+      (.destroy current-packet)
+      (swap! packet-queue pop)
+      (current-packet-changed @packet-queue))
+    ))
 
 (defn new-packet-arrived [router args]
   (let [
-        packet-queue (.-packetQueue router)]
-    (if args
-        (swap! packet-queue conj (args :new-packet))
-        (prn "WARNING: packet-created called with null args. Sad times."))
-    (when (> (entity-count "Packet") 40)
+        packet-queue (.-packetQueue router)
+        new-packet (args :new-packet)]
+    (swap! packet-queue conj (args :new-packet))
+    (if (= 1 (count @packet-queue))
+      (current-packet-changed @packet-queue))
+    (prn "NOW THERE ARE " (count @packet-queue) " PACKETS IN THE QUEUE")
+    (when (> (count @packet-queue) 40)
       (println "TOO MANY PACKETS!")
       (.scene js/Crafty "Finish"))))
 
@@ -288,13 +299,6 @@
   (set! (.-h packet) 30)
   (set! (.-alpha packet) 1.0)) 
 
-(defn check-if-consumed [me]
-  (when (.-isnext me) 
-    (prn "CONSUMED!!!" (.-isnext me) )
-    (.destroy me)
-    (prn "TODO: FIX THIS BIT WITH NEW IMP")
-    (.trigger js/Crafty "PacketCreated" {:new-packet packet})
-    ))
 (defn init-packet []
   (this-as me
            (set! (.-isnext me) false)
