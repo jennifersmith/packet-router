@@ -70,7 +70,7 @@
 
 (defn process-port-key [port]
   (when (.isDown port (.-shortcut-key port))
-    (.trigger js/Crafty "PortOpened" )))
+    (.trigger js/Crafty "PortOpened" {:port port})))
 
 (defn init-port []
   (this-as me
@@ -228,7 +228,8 @@
   (let [packet (make-entity "Packet")
         heading (.-heading port)
         entrance (.-entrance port)]
-    (.color packet (first (shuffle (disj colors (.-_color port)))))
+    (set! (.-portColor packet) (.-_color port))
+    (change-state packet :emitted)
     (.attr packet (clj->js {:x (.-x entrance) :y (.-y entrance)}))
     (.moveRandomly packet (- heading 60) (+ heading 60))))
 
@@ -246,16 +247,18 @@
 
 (defn current-packet-changed [packet-queue]
   (when-let [next (peek packet-queue)]
-    (mark-as-next next))
-)
+    (change-state next :next)))
+
 (defn send-packet-out [router args]
-  (let [packet-queue (.-packetQueue router)]
+  (let [
+        port (:port args)
+        packet-queue (.-packetQueue router)]
     (when-let [current-packet (peek @packet-queue)]
       (prn "SENDING OUT PACKET... now find correct queue")
-      (.destroy current-packet)
       (swap! packet-queue pop)
-      (current-packet-changed @packet-queue))
-    ))
+      (current-packet-changed @packet-queue)
+      (set! (.-destination current-packet) port)
+      (change-state current-packet :sent))))
 
 (defn new-packet-arrived [router args]
   (let [
@@ -281,32 +284,54 @@
            (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height 180)
            (make-router-boundary me router-padding  router-padding  router-width 5, 90)
            (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5, 90)
-            (set! (.-packetQueue me) (atom #queue []))
-           (.bind js/Crafty "PacketCreated" #(new-packet-arrived me %))
-           (.bind js/Crafty "PortOpened" #(send-packet-out me %))))
+           (prn "INIT ROUTER" (count (.-packetQueue me)))
+           (set! (.-packetQueue me) (atom #queue []))
+           (.bind me "PacketCreated" #(new-packet-arrived me %))
+           (.bind me "PortOpened" #(send-packet-out me %))))
 
-
-;; this is the worst thing ever ... presume smart way to do this
 
 (defn bounce [packet [args]]
   (let [wall (.-obj args)
         normal (.-normal wall)]
     (.reflect packet normal)))
 
-(defn mark-as-next [packet]
-  (set! (.-isnext packet) true)
-  (set! (.-w packet) 30)
-  (set! (.-h packet) 30)
-  (set! (.-alpha packet) 1.0)) 
+(def state->paint
+  {:new
+   (fn [packet]
+     (.color packet "rgb(0,0,0)")
+     (set! (.-w packet) 10)
+     (set! (.-h packet) 10)
+     (set! (.-alpha packet) 1.0))
+   :queued 
+   (fn [packet]
+     (.color packet "rgb(100,0,0)")
+     (set! (.-w packet) 10)
+     (set! (.-h packet) 10)
+     (set! (.-alpha packet) 0.7))
+   :emitted
+   (fn [packet]
+     (.color packet (first (shuffle (disj colors (.-portColor packet)))))
+     )
+   :sent
+   (fn [packet]
+     (set! (.-w packet) 10)
+     (set! (.-h packet) 10)
+     (.color packet "rgb(100,100,100)"))
+   :next
+   (fn [packet]
+     (set! (.-w packet) 30)
+     (set! (.-h packet) 30)
+     (set! (.-alpha packet) 1.0))}) 
+
+(defn change-state [packet new-state]
+  (set! (.-state packet) new-state)
+  ((state->paint new-state) packet))
+
 
 (defn init-packet []
   (this-as me
-           (set! (.-isnext me) false)
-           (set! (.-markNext me) #(mark-as-next me))
            (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision")
-           (.color me "rgb(100,0,0)")
-           (.attr me (clj->js {:w 10 :h 10}))
-           (set! (.-alpha me) 0.5)
+           (change-state me :new)
 ;;           (.velocity me 1 1 0)
            (.trigger js/Crafty "PacketCreated" {:new-packet me})
            (.onHit me "RouterBoundary" #(bounce me %))
