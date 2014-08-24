@@ -33,18 +33,6 @@
 (defn entity-count [name]
   (.-length (js/Crafty name)))
 
-(defn packet-created [game-scene]
-  (when  (> (entity-count "Packet") 1)
-    (let [first-packet (js/Crafty (aget (js/Crafty "Packet") 0))]
-      (.markNext first-packet)))
-  (when (> (entity-count "Packet") 40)
-    (println "TOO MANY PACKETS!")
-    (.each (js/Crafty "Packet")
-           (fn [] (this-as me (.destroy me))))
-    (.each (js/Crafty "RouterBoundary")
-           (fn [] (this-as me (.destroy me))))
-   (.scene js/Crafty "Finish")
-    ))
 
 
 (defn game-scene []
@@ -53,9 +41,8 @@
            (let [ports [(position-port (.e js/Crafty "Port") :north)
                         (position-port (.e js/Crafty "Port") :east)
                         (position-port (.e js/Crafty "Port") :west)
-                        (position-port (.e js/Crafty "Port") :south)]
-                 unbind (.bind js/Crafty "PacketCreated" #(packet-created me %))]
-             (set! (.-unbind-my-events me) unbind)
+                        (position-port (.e js/Crafty "Port") :south)]]
+             (set! (.-packetQueue me) (atom #queue []))
              (doseq [port ports]
 
                (.activatePort port)))))
@@ -81,13 +68,18 @@
 
 (def port-width 40)
 
+(defn process-port-key [port]
+  (when (.isDown port (.-shortcut-key port))
+    (.trigger js/Crafty "PortOpened" )))
+
 (defn init-port []
   (this-as me
-           (.requires me "Delay, 2D, Canvas, Color, Polygon")
+           (.requires me "Delay, 2D, Canvas, Color, Polygon, Keyboard")
            (.color me "rgb(50, 0, 50)")
            (set! (.-z me) 2)
            (.attr me (clj->js  {:x 0 :y 0 :w 40 :h 80}))
            (.origin me "center")
+           (.bind me "KeyDown" #(process-port-key me))
            (let [entrance (make-entity "Entrance")]
              (.attach me entrance)
              (set! (.-entrance me) entrance)
@@ -101,8 +93,7 @@
              (.text shortcut "\u2190")
              (.textFont shortcut (clj->js {:weight "bold" :size "70px"}))
              (.color shortcut "#000000", 1.0)
-             (set! (.-shortcut me) shortcut)
-             )))
+             (set! (.-shortcut me) shortcut))))
 (def colors #{
               "rgb(0,0,255)"
               "rgb(0,255,0)"
@@ -117,7 +108,7 @@
     :entrance [(+ router-padding 40) (+ 120 40)]
     :heading 90
     :color "rgb(0,0,255)"
-    :shortcut-icon "\u2190"}
+    :shortcut (.-LEFT_ARROW (.-keys js/Crafty))}
    :east
    {"x" (- width router-padding 40) 
     "y" 120
@@ -125,7 +116,8 @@
     :entrance [150 150]
     :heading -90
     :color "rgb(0,255,0)"
-    :shortcut-icon "\u2190"}
+    :shortcut-icon "\u2190"
+    :shortcut (.-RIGHT_ARROW (.-keys js/Crafty))}
    :south
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" (- height router-padding 60)
@@ -133,7 +125,8 @@
     :entrance [150 150]
     :heading 180
     :color "rgb(255,0,0)"
-    :shortcut-icon "\u2190"}
+    :shortcut-icon "\u2190"
+    :shortcut (.-DOWN_ARROW (.-keys js/Crafty))}
    :north
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" 30
@@ -141,7 +134,8 @@
     :entrance [150 150]
     :heading 0
     :color "rgb(255,0,255)"
-    :shortcut-icon "\u2190"}})
+    :shortcut-icon "\u2190"
+    :shortcut (.-UP_ARROW (.-keys js/Crafty))}})
 
 (defn set-port-loc [loc]
   (let [
@@ -150,8 +144,10 @@
         coords (select-keys position ["x" "y"])]
     (println "Setting port location" :loc loc :coords coords :position position)
     (this-as me
-             (let [shortcut (.-shortcut me)]
+             (let [shortcut (.-shortcut me)
+                   shortcut-key (:shortcut position)]
                (set! (.-x me) (position "x"))
+               (set! (.-shortcut-key me) (position :shortcut))
                (set! (.-y me) (position "y"))
                (println (.-w me))
                (set! (.-loc me) loc)
@@ -248,6 +244,20 @@
     (set! (.-normal router-boundary) normal)
     (.attr  router-boundary (clj->js {:w w :x x :h h :y y}))))
 
+(defn send-packet-out [router args]
+  (prn "PORT OPENED SEND PACKET OUT")
+  )
+
+(defn new-packet-arrived [router args]
+  (let [
+        packet-queue (.-packetQueue router)]
+    (if args
+        (swap! packet-queue conj (args :new-packet))
+        (prn "WARNING: packet-created called with null args. Sad times."))
+    (when (> (entity-count "Packet") 40)
+      (println "TOO MANY PACKETS!")
+      (.scene js/Crafty "Finish"))))
+
 (defn init-router-component [] 
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
@@ -259,7 +269,10 @@
            (make-router-boundary me (+ 5 router-padding)   router-padding  5 router-height 180)
            (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height 180)
            (make-router-boundary me router-padding  router-padding  router-width 5, 90)
-           (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5, 90)))
+           (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5, 90)
+            (set! (.-packetQueue me) (atom #queue []))
+           (.bind js/Crafty "PacketCreated" #(new-packet-arrived me %))
+           (.bind js/Crafty "PortOpened" #(send-packet-out me %))))
 
 
 ;; this is the worst thing ever ... presume smart way to do this
@@ -270,18 +283,28 @@
     (.reflect packet normal)))
 
 (defn mark-as-next [packet]
+  (set! (.-isnext packet) true)
   (set! (.-w packet) 30)
   (set! (.-h packet) 30)
   (set! (.-alpha packet) 1.0)) 
+
+(defn check-if-consumed [me]
+  (when (.-isnext me) 
+    (prn "CONSUMED!!!" (.-isnext me) )
+    (.destroy me)
+    (prn "TODO: FIX THIS BIT WITH NEW IMP")
+    (.trigger js/Crafty "PacketCreated" {:new-packet packet})
+    ))
 (defn init-packet []
   (this-as me
+           (set! (.-isnext me) false)
            (set! (.-markNext me) #(mark-as-next me))
            (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision")
            (.color me "rgb(100,0,0)")
            (.attr me (clj->js {:w 10 :h 10}))
            (set! (.-alpha me) 0.5)
 ;;           (.velocity me 1 1 0)
-           (.trigger js/Crafty "PacketCreated")
+           (.trigger js/Crafty "PacketCreated" {:new-packet me})
            (.onHit me "RouterBoundary" #(bounce me %))
            ))
 
