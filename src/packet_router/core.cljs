@@ -34,9 +34,14 @@
   (.-length (js/Crafty name)))
 
 (defn packet-created [game-scene]
-  (when (> (entity-count "Packet") 45)
+  (when (> (entity-count "Packet") 40)
     (println "TOO MANY PACKETS!")
-    (.scene js/Crafty "Finish")))
+    (.each (js/Crafty "Packet")
+           (fn [] (this-as me (.destroy me))))
+    (.each (js/Crafty "RouterBoundary")
+           (fn [] (this-as me (.destroy me))))
+   (.scene js/Crafty "Finish")
+    ))
 
 
 (defn game-scene []
@@ -215,7 +220,7 @@
            (make-router-boundary me router-padding  router-padding  router-width 5)
            (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5)))
 
-(defn stop-moving [packet]
+(defn bounce [packet]
   (set!  (.-_velocity packet) [0 0])
 )
 (defn init-packet []
@@ -225,7 +230,7 @@
            (.attr me (clj->js {:w 10 :h 10}))
 ;;           (.velocity me 1 1 0)
            (.trigger js/Crafty "PacketCreated")
-           (.onHit me "RouterBoundary" #(stop-moving me))
+           (.onHit me "RouterBoundary" #(bounce me ))
            ))
 
 (make-component "Router" (clj->js {:init init-router-component
