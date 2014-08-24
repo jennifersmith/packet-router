@@ -21,7 +21,7 @@
   (let [title-text (.e js/Crafty "TitleText") ]
     (.text
      title-text
-     "Welcome to Packet Router.... <br/>a game created for Connected Worlds theme Ludum Dare 36")
+     "Welcome to Packet Router.... <br/>a game created for Connected Worlds theme Ludum Dare 30")
     (.attr title-text  (clj->js {:y 100}))) )
 
 (defn make-entity [name]
