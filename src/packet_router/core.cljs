@@ -78,9 +78,11 @@
            (.requires me "Delay, 2D, Canvas, Color, Polygon")
            (.color me "rgb(50, 0, 50)")
            (.attr me (clj->js  {:x 0 :y 0 :w 40 :h 80}))
+           (.origin me "center")
            (let [entrance (make-entity "Entrance")]
              (.attach me entrance)
-             (.attr entrance {:x 20 :y 20 }))))
+             (.attr entrance (clj->js {:x 35 :y 37 }))
+             )))
 
 (def loc->position
   {:west
@@ -92,19 +94,19 @@
    :east
    {"x" (- width 20 router-padding) 
     "y" 120
-    "r" 0
+    "r" 180
     :entrance [150 150]
     :heading 0}
    :south
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
-    "y" (- height (- router-padding 20))
-    "r" -90
+    "y" (- height router-padding 40)
+    "r" -89.999999
     :entrance [150 150]
     :heading 90}
    :north
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
-    "y" (+ router-padding 20)
-    "r" -90
+    "y" 10
+    "r" 89.999999
     :entrance [150 150]
     :heading 0}})
 
@@ -122,8 +124,7 @@
              (set! (.-loc me) loc)
              (set! (.-heading me) heading)
              (set! (.-entrance me) entrance)
-             (set!
-              (.-rotation me) (position "r")))))
+             (set! (.-rotation me) (position "r")))))
 
 (defn update-position-of-moving-component [entity]
   (let [[x-vel y-vel] (.-_velocity entity)
@@ -224,7 +225,7 @@
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
            (.color me "rgb(100,100,100)")
-           (.attr me (clj->js {:w 5 :h 5}))))
+           (.attr me (clj->js {:w 5 :h 6}))))
 
 (make-component "Entrance" (clj->js {:init init-entrance}))
 
