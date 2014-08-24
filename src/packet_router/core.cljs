@@ -58,7 +58,7 @@
     (.text
      title-text
      "YOU DIED! <br/>(But you got a good score, honest)")
-    (.attr title-text  (clj->js {:y 150})))
+    (.attr title-text  (clj->js {:y 120})))
 )
 
 
