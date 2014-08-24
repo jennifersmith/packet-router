@@ -295,6 +295,16 @@
         normal (.-normal wall)]
     (.reflect packet normal)))
 
+(defn make-tick [packet]
+  (let [tick (make-entity "Dom, 2D, Color, Canvas, Text")]
+    (.attach packet tick)
+    (.color tick "rgb(0,0,0)")
+    (.text tick "X")
+    (.textFont tick (clj->js {"size" "8px"}))
+    (.attr tick (clj->js {:x (+ 5 (.-_x packet)) :y (+ 5 (.-_y packet))}))
+    ))
+
+
 (def state->paint
   {:new
    (fn [packet]
@@ -314,9 +324,8 @@
      )
    :sent
    (fn [packet]
-     (set! (.-w packet) 10)
-     (set! (.-h packet) 10)
-     (.color packet "rgb(100,100,100)"))
+     (.color packet "rgb(100,100,100)")
+     (make-tick packet))
    :next
    (fn [packet]
      (set! (.-w packet) 30)
