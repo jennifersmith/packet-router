@@ -76,40 +76,52 @@
 (defn init-port []
   (this-as me
            (.requires me "Delay, 2D, Canvas, Color, Polygon")
-           (.color me "rgb(50, 0, 50)")))
+           (.color me "rgb(50, 0, 50)")
+           (.attr me (clj->js  {:x 0 :y 0 :w 40 :h 80}))
+           (let [entrance (make-entity "Entrance")]
+             (.attach me entrance)
+             (.attr entrance {:x 20 :y 20 }))))
 
 (def loc->position
   {:west
    {"x" 30 
     "y" 120
     "r" 0
+    :entrance [(+ router-padding 40) (+ 120 40)]
     :heading 180}
    :east
    {"x" (- width 20 router-padding) 
     "y" 120
     "r" 0
+    :entrance [150 150]
     :heading 0}
    :south
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" (- height (- router-padding 20))
     "r" -90
+    :entrance [150 150]
     :heading 90}
    :north
    {"x" (+ (- (/ width 2)  80 ) router-padding) 
     "y" (+ router-padding 20)
     "r" -90
+    :entrance [150 150]
     :heading 0}})
 
 (defn set-port-loc [loc]
   (let [
         position (loc->position loc)
         heading (:heading position)
-        coords (merge {:w 40 :h 80} (select-keys position ["x" "y"]))]
-    (println "Setting port location" :loc loc :coords coords)
+        entrance (:entrance position)
+        coords (select-keys position ["x" "y"])]
+    (println "Setting port location" :loc loc :coords coords :position position)
     (this-as me
-             (.attr me (clj->js coords))
+             (set! (.-x me) (position "x"))
+             (set! (.-y me) (position "y"))
+             (println (.-w me))
              (set! (.-loc me) loc)
              (set! (.-heading me) heading)
+             (set! (.-entrance me) entrance)
              (set!
               (.-rotation me) (position "r")))))
 
@@ -175,10 +187,12 @@
 
 (defn emit-packet [port]
   ;; eek
-  (dump-statebag "Emitting packet from port " :loc (.-loc port) :heading (.-heading port))
+  (dump-statebag "Emitting packet from port " :loc (.-loc port) :heading (.-heading port) :entrance (.-entrance port))
   (let [packet (make-entity "Packet")
-        heading (.-heading port)]
-    (.moveRandomly packet (- heading 60) (+ heading 60) )))
+        heading (.-heading port)
+        [x y] (.-entrance port)]
+    (.attr packet (clj->js {:x x :y y}))
+    (.moveRandomly packet (- heading 60) (+ heading 60))))
 
 (defn activate-port []
   (this-as me
@@ -199,12 +213,20 @@
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon, RandomMover")
            (.color me "rgb(100,0,0)")
-           (.attr me (clj->js {:w 10 :h 10 :x 150 :y 150}))
+           (.attr me (clj->js {:w 10 :h 10}))
 ;;           (.velocity me 1 1 0)
            (.trigger js/Crafty "PacketCreated")))
 
 (make-component "Router" (clj->js {:init init-router-component
                                    }) )
+
+(defn init-entrance []
+  (this-as me
+           (.requires me "2D, Canvas, Color, Polygon")
+           (.color me "rgb(100,100,100)")
+           (.attr me (clj->js {:w 5 :h 5}))))
+
+(make-component "Entrance" (clj->js {:init init-entrance}))
 
 (make-component "Port" (clj->js {:init init-port
                                  :setPortLoc set-port-loc
