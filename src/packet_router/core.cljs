@@ -34,6 +34,9 @@
   (.-length (js/Crafty name)))
 
 (defn packet-created [game-scene]
+  (when  (> (entity-count "Packet") 1)
+    (let [first-packet (js/Crafty (aget (js/Crafty "Packet") 0))]
+      (.markNext first-packet)))
   (when (> (entity-count "Packet") 40)
     (println "TOO MANY PACKETS!")
     (.each (js/Crafty "Packet")
@@ -51,7 +54,7 @@
                         (position-port (.e js/Crafty "Port") :east)
                         (position-port (.e js/Crafty "Port") :west)
                         (position-port (.e js/Crafty "Port") :south)]
-                 unbind (.bind js/Crafty "PacketCreated" #(packet-created me))]
+                 unbind (.bind js/Crafty "PacketCreated" #(packet-created me %))]
              (set! (.-unbind-my-events me) unbind)
              (doseq [port ports]
 
@@ -260,11 +263,17 @@
         normal (.-normal wall)]
     (.reflect packet normal)))
 
+(defn mark-as-next [packet]
+  (set! (.-w packet) 30)
+  (set! (.-h packet) 30)
+  (set! (.-alpha packet) 1.0)) 
 (defn init-packet []
   (this-as me
+           (set! (.-markNext me) #(mark-as-next me))
            (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision, WiredHitBox")
            (.color me "rgb(100,0,0)")
            (.attr me (clj->js {:w 10 :h 10}))
+           (set! (.-alpha me) 0.5)
 ;;           (.velocity me 1 1 0)
            (.trigger js/Crafty "PacketCreated")
            (.onHit me "RouterBoundary" #(bounce me %))
