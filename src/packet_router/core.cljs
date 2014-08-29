@@ -6,7 +6,8 @@
 
 (defn set-color [entity color]
   (.color entity color))
-
+(defn set-attr [entity attributes]
+  (.attr entity (clj->js attributes)))
 
 (defn dump-statebag [msg & kvs]
   (println msg (apply hash-map kvs)))
@@ -28,7 +29,7 @@
     (.text
      title-text
      "Welcome to Packet Router.... <br/>a game created for Connected Worlds theme Ludum Dare 30")
-    (.attr title-text  (clj->js {:y 100}))) )
+    (set-attr title-text  {:y 100})) )
 
 (defn make-entity [name]
   (.e js/Crafty name))
@@ -64,7 +65,7 @@
     (.text
      title-text
      "YOU DIED! <br/>(But you got a good score, honest)")
-    (.attr title-text  (clj->js {:y 120})))
+    (set-attr title-text  {:y 120}))
 )
 
 
@@ -86,18 +87,18 @@
            (.requires me "Delay, 2D, Canvas, Color, Polygon, Keyboard")
            (set-color me "rgb(50, 0, 50)")
            (set! (.-z me) 2)
-           (.attr me (clj->js  {:x 0 :y 0 :w 40 :h 80}))
+           (set-attr me {:x 0 :y 0 :w 40 :h 80})
            (.origin me "center")
            (.bind me "KeyDown" #(process-port-key me))
            (let [entrance (make-entity "Entrance")]
              (.attach me entrance)
              (set! (.-entrance me) entrance)
-             (.attr entrance (clj->js {:x 35 :y 37 }))
+             (set-attr entrance {:x 35 :y 37 })
              )
            (let [shortcut (make-entity "Color, 2D, DOM, Text")]
-             (.attr shortcut (clj->js {
-                                       :x -50
-                                       :y -1}))
+             (set-attr shortcut {
+                                 :x -50
+                                 :y -1})
              (.attach me shortcut)
              (.text shortcut "\u2190")
              (.textFont shortcut (clj->js {:weight "bold" :size "70px"}))
@@ -239,7 +240,7 @@
         entrance (.-entrance port)]
     (set! (.-portColor packet) (.-_color port))
     (change-state packet :emitted)
-    (.attr packet (clj->js {:x (.-x entrance) :y (.-y entrance)}))
+    (set-attr packet {:x (.-x entrance) :y (.-y entrance)})
     (.moveRandomly packet (- heading 60) (+ heading 60))))
 
 (defn activate-port []
@@ -252,7 +253,7 @@
   (let [router-boundary (make-entity "RouterBoundary")]
     (.attach router router-boundary)
     (set! (.-normal router-boundary) normal)
-    (.attr  router-boundary (clj->js {:w w :x x :h h :y y}))))
+    (set-attr router-boundary {:w w :x x :h h :y y})))
 
 (defn current-packet-changed [packet-queue]
   (when-let [next (peek packet-queue)]
@@ -285,10 +286,10 @@
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
            (set-color me "rgb(20, 125, 40)")
-           (.attr me (clj->js {"x" router-padding 
-                               "y" router-padding 
-                               "w" router-width
-                               "h" router-height}))
+           (set-attr me {"x" router-padding 
+                      "y" router-padding 
+                      "w" router-width
+                      "h" router-height})
            (make-router-boundary me (+ 5 router-padding)   router-padding  5 router-height 180)
            (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height 180)
            (make-router-boundary me router-padding  router-padding  router-width 5, 90)
@@ -310,7 +311,7 @@
     (set-color tick (set-color (.-destination packet)))
     (.text tick "X")
     (.textFont tick (clj->js {"size" "20px"}))
-    (.attr tick (clj->js {:x (+ 5 (.-_x packet)) :y (+ 5 (.-_y packet))}))
+    (set-attr tick {:x (+ 5 (.-_x packet)) :y (+ 5 (.-_y packet))})
     ))
 
 
@@ -365,7 +366,7 @@
            (.requires me "2D, Canvas, Color, Polygon")
            (set-color me "rgb(100,100,100)")
            (set! (.-z me) 2)
-           (.attr me (clj->js {:w 5 :h 6}))))
+           (set-attr me {:w 5 :h 6})))
 
 (defn init-router-boundary []
   (this-as me
@@ -378,7 +379,7 @@
            (.textFont me (clj->js {:size "24px"}))
            (.css me (clj->js {:text-align "center"}))
            (.textColor me "rgb(100,100,100)")
-           (.attr me (clj->js {:x router-padding :w router-width}))
+           (set-attr me {:x router-padding :w router-width})
            ))
 (make-component "Entrance" (clj->js {:init init-entrance}))
 
