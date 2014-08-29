@@ -4,8 +4,12 @@
 
 ;;===== These are all moving out interop calls into own functions : not long term thing ... presume could get a bit more fancy ====
 
-(defn set-color [entity color]
-  (.color entity color))
+(defn set-color
+([entity color alpha]
+                   (.color entity color alpha)) 
+([entity color]
+                   (.color entity color)))
+
 (defn set-attr [entity attributes]
   (.attr entity (clj->js attributes)))
 
@@ -308,7 +312,7 @@
 (defn make-tick [packet]
   (let [tick (make-entity "Dom, 2D, Color, Canvas, Text")]
     (.attach packet tick)
-    (set-color tick (set-color (.-destination packet)))
+    (set-color tick (.-_color (.-destination packet)))
     (.text tick "X")
     (.textFont tick (clj->js {"size" "20px"}))
     (set-attr tick {:x (+ 5 (.-_x packet)) :y (+ 5 (.-_y packet))})
@@ -392,6 +396,7 @@
 (make-component "RouterBoundary" (clj->js {:init init-router-boundary}))
 
 (make-component "TitleText" (clj->js {:init init-title-text}))
+
 (make-scene-with-transition "Intro" loading-scene "Game")
 (make-scene "Game" game-scene game-scene-uninit)
 (make-scene-with-transition "Finish" finish-scene "Intro")
