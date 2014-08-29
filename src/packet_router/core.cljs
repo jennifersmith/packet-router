@@ -2,6 +2,12 @@
 
 (enable-console-print!)
 
+;;===== These are all moving out interop calls into own functions : not long term thing ... presume could get a bit more fancy ====
+
+(defn set-color [entity color]
+  (.color entity color))
+
+
 (defn dump-statebag [msg & kvs]
   (println msg (apply hash-map kvs)))
 
@@ -78,7 +84,7 @@
 (defn init-port []
   (this-as me
            (.requires me "Delay, 2D, Canvas, Color, Polygon, Keyboard")
-           (.color me "rgb(50, 0, 50)")
+           (set-color me "rgb(50, 0, 50)")
            (set! (.-z me) 2)
            (.attr me (clj->js  {:x 0 :y 0 :w 40 :h 80}))
            (.origin me "center")
@@ -95,7 +101,7 @@
              (.attach me shortcut)
              (.text shortcut "\u2190")
              (.textFont shortcut (clj->js {:weight "bold" :size "70px"}))
-             (.color shortcut "#000000", 1.0)
+             (set-color shortcut "#000000", 1.0)
              (set! (.-shortcut me) shortcut))))
 (def colors #{
               "rgb(0,0,255)"
@@ -154,7 +160,7 @@
                (set! (.-y me) (position "y"))
                (println (.-w me))
                (set! (.-loc me) loc)
-               (.color me (:color position))
+               (set-color me (:color position))
                (set! (.-heading me) heading)
                (set! (.-rotation me) (position "r"))
                )
@@ -278,7 +284,7 @@
 (defn init-router-component [] 
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
-           (.color me "rgb(20, 125, 40)")
+           (set-color me "rgb(20, 125, 40)")
            (.attr me (clj->js {"x" router-padding 
                                "y" router-padding 
                                "w" router-width
@@ -301,7 +307,7 @@
 (defn make-tick [packet]
   (let [tick (make-entity "Dom, 2D, Color, Canvas, Text")]
     (.attach packet tick)
-    (.color tick (.color (.-destination packet)))
+    (set-color tick (set-color (.-destination packet)))
     (.text tick "X")
     (.textFont tick (clj->js {"size" "20px"}))
     (.attr tick (clj->js {:x (+ 5 (.-_x packet)) :y (+ 5 (.-_y packet))}))
@@ -311,23 +317,23 @@
 (def state->paint
   {:new
    (fn [packet]
-     (.color packet "rgb(0,0,0)")
+     (set-color packet "rgb(0,0,0)")
      (set! (.-w packet) 10)
      (set! (.-h packet) 10)
      (set! (.-alpha packet) 1.0))
    :queued 
    (fn [packet]
-     (.color packet "rgb(100,0,0)")
+     (set-color packet "rgb(100,0,0)")
      (set! (.-w packet) 10)
      (set! (.-h packet) 10)
      (set! (.-alpha packet) 0.7))
    :emitted
    (fn [packet]
-     (.color packet (first (shuffle (disj colors (.-portColor packet)))))
+     (set-color packet (first (shuffle (disj colors (.-portColor packet)))))
      )
    :sent
    (fn [packet]
-     (.color packet "rgb(100,100,100)")
+     (set-color packet "rgb(100,100,100)")
      (make-tick packet)
      (.delay packet #(.destroy packet) 1000 0 )
      )
@@ -357,7 +363,7 @@
 (defn init-entrance []
   (this-as me
            (.requires me "2D, Canvas, Color, Polygon")
-           (.color me "rgb(100,100,100)")
+           (set-color me "rgb(100,100,100)")
            (set! (.-z me) 2)
            (.attr me (clj->js {:w 5 :h 6}))))
 
