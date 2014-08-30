@@ -4,6 +4,8 @@
 
 ;;===== These are all moving out interop calls into own functions : not long term thing ... presume could get a bit more fancy ====
 
+(defn make-entity [name]
+  (.e js/Crafty name))
 (defn set-color
 ([entity color alpha]
                    (.color entity color alpha)) 
@@ -40,14 +42,13 @@
   (js/makescenewithtransition name init-fn next-scene))
 
 (defn loading-scene []
-  (let [title-text (.e js/Crafty "TitleText") ]
+  (let [title-text (make-entity "TitleText") ]
     (.text
      title-text
      "Welcome to Packet Router.... <br/>a game created for Connected Worlds theme Ludum Dare 30")
     (set-attr title-text  {:y 100})) )
 
-(defn make-entity [name]
-  (.e js/Crafty name))
+
 ;; So I am REALLY not using clojure correctly. I don't care. I can see a way and it still
 ;; feels easier to me to be in fam language. Justifications :)
 (defn position-port [e loc]
@@ -60,11 +61,11 @@
 
 (defn game-scene []
   (this-as me
-           (.e js/Crafty "Router")
-           (let [ports [(position-port (.e js/Crafty "Port") :north)
-                        (position-port (.e js/Crafty "Port") :east)
-                        (position-port (.e js/Crafty "Port") :west)
-                        (position-port (.e js/Crafty "Port") :south)]]
+           (make-entity "Router")
+           (let [ports [(position-port (make-entity "Port") :north)
+                        (position-port (make-entity "Port") :east)
+                        (position-port (make-entity "Port") :west)
+                        (position-port (make-entity "Port") :south)]]
              (set! (.-packetQueue me) (atom #queue []))
              (doseq [port ports]
 
@@ -76,7 +77,7 @@
              (unbind))))
  
 (defn finish-scene []
-  (let [title-text (.e js/Crafty "TitleText") ]
+  (let [title-text (make-entity "TitleText") ]
     (.text
      title-text
      "YOU DIED! <br/>(But you got a good score, honest)")
