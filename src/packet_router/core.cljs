@@ -2,10 +2,16 @@
 
 (enable-console-print!)
 
+(defn dump-statebag [msg & kvs]
+  (println msg (apply hash-map kvs)))
 ;;===== These are all moving out interop calls into own functions : not long term thing ... presume could get a bit more fancy ====
 
+;; adding a state bag for clojurey stuff
 (defn make-entity [name]
-  (.e js/Crafty name))
+  (let [entity
+        (.e js/Crafty name)]
+    entity))
+
 (defn set-color
 ([entity color alpha]
                    (.color entity color alpha)) 
@@ -15,8 +21,18 @@
 (defn set-attr [entity attributes]
   (.attr entity (clj->js attributes)))
 
-(defn dump-statebag [msg & kvs]
-  (println msg (apply hash-map kvs)))
+;; grr should this be a component thing? probably
+(defn assoc-entity-state [entity & new-state]
+  (let [state (.-stateBag entity)]
+    (set! (.-stateBag entity) 
+          (merge state (apply hash-map new-state)))))
+
+(defn entity-state [entity key]
+  (let [state-bag (or (.-stateBag entity) {})]
+    (state-bag  key)))
+
+
+
 
 (defn make-init-fn [init-fn requires]
   (fn []
@@ -30,6 +46,7 @@
                    (merge 
                     {:init (make-init-fn init-fn requires)}
                     additional-fns))))
+
 
 
 (defn make-scene [name init-fn uninit-fn]
@@ -66,9 +83,8 @@
                         (position-port (make-entity "Port") :east)
                         (position-port (make-entity "Port") :west)
                         (position-port (make-entity "Port") :south)]]
-             (set! (.-packetQueue me) (atom #queue []))
+             (assoc-entity-state me :packet-queue (atom #queue []))
              (doseq [port ports]
-
                (.activatePort port)))))
 
 (defn game-scene-uninit []
@@ -280,7 +296,7 @@
 (defn send-packet-out [router args]
   (let [
         port (:port args)
-        packet-queue (.-packetQueue router)]
+        packet-queue (entity-state router :packet-queue)]
     (when-let [current-packet (peek @packet-queue)]
       (prn "SENDING OUT PACKET... now find correct queue")
       (swap! packet-queue pop)
@@ -290,7 +306,7 @@
 
 (defn new-packet-arrived [router args]
   (let [
-        packet-queue (.-packetQueue router)
+        packet-queue (entity-state router :packet-queue)
         new-packet (args :new-packet)]
     (swap! packet-queue conj (args :new-packet))
     (if (= 1 (count @packet-queue))
@@ -310,8 +326,8 @@
   (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height 180)
   (make-router-boundary me router-padding  router-padding  router-width 5, 90)
   (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5, 90)
-  (prn "INIT ROUTER" (count (.-packetQueue me)))
-  (set! (.-packetQueue me) (atom #queue []))
+  (prn "INIT ROUTER" (count (entity-state me :packet-queue)))
+  (assoc-entity-state me :packet-queue (atom #queue []))
   (.bind me "PacketCreated" #(new-packet-arrived me %))
   (.bind me "PortOpened" #(send-packet-out me %)))
 
@@ -397,7 +413,7 @@
   (set-attr me {:x router-padding :w router-width})
   )
 
-(make-component-awesome "TitleText" init-title-text "Color,2D, DOM, Text")
+(make-component-awesome "TitleText" init-title-text "Color,2D, DOM, Text" {})
 
 
 
