@@ -16,8 +16,19 @@
 (defn dump-statebag [msg & kvs]
   (println msg (apply hash-map kvs)))
 
-(defn make-component [name obj]
-  (.c js/Crafty name obj))
+(defn make-init-fn [init-fn requires]
+  (fn []
+    (this-as me
+             (.requires me requires)
+             (init-fn me))))
+
+(defn make-component-awesome [name init-fn requires additional-fns]
+  (.c js/Crafty name
+                  (clj->js
+                   (merge 
+                    {:init (make-init-fn init-fn requires)}
+                    additional-fns))))
+
 
 (defn make-scene [name init-fn uninit-fn]
   (.scene js/Crafty name init-fn uninit-fn))
@@ -86,28 +97,56 @@
   (when (.isDown port (.-shortcut-key port))
     (.trigger js/Crafty "PortOpened" {:port port})))
 
-(defn init-port []
+(defn set-port-loc [loc]
+  (let [
+        position (loc->position loc)
+        heading (:heading position)
+        coords (select-keys position ["x" "y"])]
+    (println "Setting port location" :loc loc :coords coords :position position)
+    (this-as me
+             (let [shortcut (.-shortcut me)
+                   shortcut-key (:shortcut position)]
+               (set! (.-x me) (position "x"))
+               (set! (.-shortcut-key me) (position :shortcut))
+               (set! (.-y me) (position "y"))
+               (println (.-w me))
+               (set! (.-loc me) loc)
+               (set-color me (:color position))
+               (set! (.-heading me) heading)
+               (set! (.-rotation me) (position "r"))
+               )
+)))
+
+(defn init-port [me]
+  (set-color me "rgb(50, 0, 50)")
+  (set! (.-z me) 2)
+  (set-attr me {:x 0 :y 0 :w 40 :h 80})
+  (.origin me "center")
+  (.bind me "KeyDown" #(process-port-key me))
+  (let [entrance (make-entity "Entrance")]
+    (.attach me entrance)
+    (set! (.-entrance me) entrance)
+    (set-attr entrance {:x 35 :y 37 })
+    )
+  (let [shortcut (make-entity "Color, 2D, DOM, Text")]
+    (set-attr shortcut {
+                        :x -50
+                        :y -1})
+    (.attach me shortcut)
+    (.text shortcut "\u2190")
+    (.textFont shortcut (clj->js {:weight "bold" :size "70px"}))
+    (set-color shortcut "#000000", 1.0)
+    (set! (.-shortcut me) shortcut)))
+
+(defn activate-port []
   (this-as me
-           (.requires me "Delay, 2D, Canvas, Color, Polygon, Keyboard")
-           (set-color me "rgb(50, 0, 50)")
-           (set! (.-z me) 2)
-           (set-attr me {:x 0 :y 0 :w 40 :h 80})
-           (.origin me "center")
-           (.bind me "KeyDown" #(process-port-key me))
-           (let [entrance (make-entity "Entrance")]
-             (.attach me entrance)
-             (set! (.-entrance me) entrance)
-             (set-attr entrance {:x 35 :y 37 })
-             )
-           (let [shortcut (make-entity "Color, 2D, DOM, Text")]
-             (set-attr shortcut {
-                                 :x -50
-                                 :y -1})
-             (.attach me shortcut)
-             (.text shortcut "\u2190")
-             (.textFont shortcut (clj->js {:weight "bold" :size "70px"}))
-             (set-color shortcut "#000000", 1.0)
-             (set! (.-shortcut me) shortcut))))
+           (dump-statebag "I am a port that is being activated" :loc (.-loc me))
+           (.delay me #(emit-packet me) 1000 1000)))
+
+(make-component-awesome "Port" init-port "Delay, 2D, Canvas, Color, Polygon, Keyboard"  {:setPortLoc set-port-loc
+                                                                                 :activatePort activate-port})
+
+
 (def colors #{
               "rgb(0,0,255)"
               "rgb(0,255,0)"
@@ -151,25 +190,7 @@
     :shortcut-icon "\u2190"
     :shortcut (.-UP_ARROW (.-keys js/Crafty))}})
 
-(defn set-port-loc [loc]
-  (let [
-        position (loc->position loc)
-        heading (:heading position)
-        coords (select-keys position ["x" "y"])]
-    (println "Setting port location" :loc loc :coords coords :position position)
-    (this-as me
-             (let [shortcut (.-shortcut me)
-                   shortcut-key (:shortcut position)]
-               (set! (.-x me) (position "x"))
-               (set! (.-shortcut-key me) (position :shortcut))
-               (set! (.-y me) (position "y"))
-               (println (.-w me))
-               (set! (.-loc me) loc)
-               (set-color me (:color position))
-               (set! (.-heading me) heading)
-               (set! (.-rotation me) (position "r"))
-               )
-)))
+
 
 (defn update-position-of-moving-component [entity]
   (let [[x-vel y-vel] (.-vectorvelocity entity)
@@ -188,21 +209,18 @@
   (this-as me
            (.move me (- (* 2 normal) (.-heading me)) (.-velocity me))))
 
-(defn init-moving []
-  (this-as me
-           (.requires me "2D")
-           (set! (.-move me) move-mover) ;; mmmmmm
-           (set! (.-reflect me) reflect-mover)
-           (.bind me "EnterFrame" #(update-position-of-moving-component me))))
+(defn init-moving [me]
+  (set! (.-move me) move-mover) ;; mmmmmm
+  (set! (.-reflect me) reflect-mover)
+  (.bind me "EnterFrame" #(update-position-of-moving-component me)))
 
-(make-component "Mover" 
-                (clj->js {
-                          :init init-moving
-                          :_time 0.1
-                          :velocity 0
-                          :vectorvelocity [0 0]
-                          :heading 0
-                                   }) )
+(make-component-awesome "Mover" init-moving "2D"
+                {
+                 :_time 0.1
+                 :velocity 0
+                 :vectorvelocity [0 0]
+                 :heading 0
+                 } )
 
 ;; the programmer can only work in degrees today
 (defn deg->rad [angle]
@@ -217,9 +235,6 @@
 (def angle-to-unit-vectors (juxt sin cos))
 ;; private member access oyeah
 
-(defn init-random-mover []
-  (this-as me
-           (.requires me "Mover")))
 
 (defn move-randomly [min-heading max-heading]
   (this-as me
@@ -227,12 +242,13 @@
                  heading  (+ min-heading (rand-int (- max-heading min-heading)))]
              (.move me heading vel))))
 
-
-(make-component "RandomMover"
-                (clj->js {
-                          :init init-random-mover
-                          :moveRandomly move-randomly
-                          }))
+;; no init needed
+(make-component-awesome "RandomMover" 
+                        (fn [x] )
+                        "Mover"
+                 {
+                   :moveRandomly move-randomly
+                   })
 
 (defn fetch-global-router-evil []
   (js/Crafty (aget (js/Crafty "Router") 0)))
@@ -247,10 +263,7 @@
     (set-attr packet {:x (.-x entrance) :y (.-y entrance)})
     (.moveRandomly packet (- heading 60) (+ heading 60))))
 
-(defn activate-port []
-  (this-as me
-           (dump-statebag "I am a port that is being activated" :loc (.-loc me))
-           (.delay me #(emit-packet me) 1000 1000)))
+
 
 ;; normal - the angle of 'normal' for bounce
 (defn make-router-boundary [router x y w h normal]
@@ -286,22 +299,20 @@
       (println "TOO MANY PACKETS!")
       (.scene js/Crafty "Finish"))))
 
-(defn init-router-component [] 
-  (this-as me
-           (.requires me "2D, Canvas, Color, Polygon")
-           (set-color me "rgb(20, 125, 40)")
-           (set-attr me {"x" router-padding 
-                      "y" router-padding 
-                      "w" router-width
-                      "h" router-height})
-           (make-router-boundary me (+ 5 router-padding)   router-padding  5 router-height 180)
-           (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height 180)
-           (make-router-boundary me router-padding  router-padding  router-width 5, 90)
-           (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5, 90)
-           (prn "INIT ROUTER" (count (.-packetQueue me)))
-           (set! (.-packetQueue me) (atom #queue []))
-           (.bind me "PacketCreated" #(new-packet-arrived me %))
-           (.bind me "PortOpened" #(send-packet-out me %))))
+(defn init-router-component [me] 
+  (set-color me "rgb(20, 125, 40)")
+  (set-attr me {"x" router-padding 
+                "y" router-padding 
+                "w" router-width
+                "h" router-height})
+  (make-router-boundary me (+ 5 router-padding)   router-padding  5 router-height 180)
+  (make-router-boundary me (+ router-width router-padding -10)  router-padding  5 router-height 180)
+  (make-router-boundary me router-padding  router-padding  router-width 5, 90)
+  (make-router-boundary me router-padding  (+ router-padding router-height -5) router-width 5, 90)
+  (prn "INIT ROUTER" (count (.-packetQueue me)))
+  (set! (.-packetQueue me) (atom #queue []))
+  (.bind me "PacketCreated" #(new-packet-arrived me %))
+  (.bind me "PortOpened" #(send-packet-out me %)))
 
 
 (defn bounce [packet [args]]
@@ -353,49 +364,46 @@
   ((state->paint new-state) packet))
 
 
-(defn init-packet []
-  (this-as me
-           (.requires me "2D, Canvas, Color, Polygon, RandomMover, Collision,Delay")
-           (change-state me :new)
-;;           (.velocity me 1 1 0)
-           (.trigger js/Crafty "PacketCreated" {:new-packet me})
-           (.onHit me "RouterBoundary" #(bounce me %))
-           ))
+(defn init-packet [me]
+  (change-state me :new)
+  ;;           (.velocity me 1 1 0)
+  (.trigger js/Crafty "PacketCreated" {:new-packet me})
+  (.onHit me "RouterBoundary" #(bounce me %))
+  )
 
-(make-component "Router" (clj->js {:init init-router-component
-                                   }) )
+(make-component-awesome "Packet" init-packet "2D, Canvas, Color, Polygon, RandomMover, Collision,Delay" {})
 
-(defn init-entrance []
-  (this-as me
-           (.requires me "2D, Canvas, Color, Polygon")
-           (set-color me "rgb(100,100,100)")
-           (set! (.-z me) 2)
-           (set-attr me {:w 5 :h 6})))
+(make-component-awesome "Router" init-router-component "2D, Canvas, Color, Polygon" {})
+
+(defn init-entrance [me]
+    (set-color me "rgb(100,100,100)")
+  (set! (.-z me) 2)
+  (set-attr me {:w 5 :h 6}))
+
+(make-component-awesome "Entrance" init-entrance "2D, Canvas, Color, Polygon" {})
 
 (defn init-router-boundary []
   (this-as me
-           (.requires me "2D, Polygon, Canvas, Collision, Color")
+           (.requires me )
            ))
 
-(defn init-title-text []
-  (this-as me
-           (.requires me "Color,2D, DOM, Text")
-           (.textFont me (clj->js {:size "24px"}))
-           (.css me (clj->js {:text-align "center"}))
-           (.textColor me "rgb(100,100,100)")
-           (set-attr me {:x router-padding :w router-width})
-           ))
-(make-component "Entrance" (clj->js {:init init-entrance}))
+(make-component-awesome "RouterBoundary" identity "2D, Polygon, Canvas, Collision, Color" {})
 
-(make-component "Port" (clj->js {:init init-port
-                                 :setPortLoc set-port-loc
-                                 :activatePort activate-port}))
+(defn init-title-text [me]
+  (.textFont me (clj->js {:size "24px"}))
+  (.css me (clj->js {:text-align "center"}))
+  (.textColor me "rgb(100,100,100)")
+  (set-attr me {:x router-padding :w router-width})
+  )
 
-(make-component "Packet" (clj->js {:init init-packet}))
+(make-component-awesome "TitleText" init-title-text "Color,2D, DOM, Text")
 
-(make-component "RouterBoundary" (clj->js {:init init-router-boundary}))
 
-(make-component "TitleText" (clj->js {:init init-title-text}))
+
+
+
+
+
 
 (make-scene-with-transition "Intro" loading-scene "Game")
 (make-scene "Game" game-scene game-scene-uninit)
